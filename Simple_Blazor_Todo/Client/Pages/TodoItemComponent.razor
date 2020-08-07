@@ -1,0 +1,45 @@
+﻿@using Simple_Blazor_Todo.Shared
+
+@if(todo != null) {
+    
+    <div class="border-dark border-1">
+        <div class="input-group" >
+            <div class="input-group-prepend">
+                <div class="input-group-text">
+                    <input class="check" type="checkbox" @bind="@todo.IsDone" />
+                </div>
+            </div>
+            <input type="text" class="form-control" @bind="todo.Titel" 
+                   style="@(todo.IsDone ? "text-decoration-line: line-through" : "")" 
+                   @attributes="(todo.IsDone ? attributesDisabled : null)"/>
+            <button @onclick="ToggleCollapse">collapse</button>
+        </div>
+        @if(todo.ChildItems != null && todo.ChildItems.Count() > 0) {
+            <div>
+                @foreach (var item in todo.ChildItems) {
+                    <div class="ml-2 mt-1">
+                        <TodoItemComponent todo="item"></TodoItemComponent>
+                    </div>
+                }
+            </div>
+        }
+        <div class="@DetailsCssClasses from-group">
+            <label>Description</label>
+            <textarea class="form-control" rows="4" @bind="todo.Description"></textarea>
+        </div>
+    </div>
+}
+
+@code {
+    private bool collapseDetails = true;
+    private string DetailsCssClasses => collapseDetails ? "collapse" : null;
+
+    private Dictionary<string, object> attributesDisabled = new Dictionary<string, object>() {
+        {"disabled", ""}
+    };
+
+    [Parameter]
+    public TodoItem todo { get; set; }
+
+    private void ToggleCollapse() => collapseDetails = !collapseDetails;
+}

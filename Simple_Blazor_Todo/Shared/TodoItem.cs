@@ -10,5 +10,8 @@ namespace Simple_Blazor_Todo.Shared
         public string Titel { get; set; }
         public string Description { get; set; }
         public bool IsDone { get; set; }
+
+        public IEnumerable<TodoItem> ChildItems { get; set; }
+        //public TodoItem ParentItem { get; set; }
     }
 }
