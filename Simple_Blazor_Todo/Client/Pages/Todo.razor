@@ -1,0 +1,67 @@
+﻿@using Simple_Blazor_Todo.Shared
+@inject HttpClient Http
+
+<h3>Todo</h3>
+
+<p>@currentMessage</p>
+
+<div class="form-group">
+    <ul class="list-group">
+        @foreach (var item in todos)
+        {
+        <li class="list-group-item" style="@(item.IsDone ? "text-decoration-line: line-through" : "") ">
+            <div class="input-group mb-3">
+                <div class="input-group-prepend">
+                    <div class="input-group-text"> 
+                        <input class="check" type="checkbox" @bind="@item.IsDone"  />
+                    </div>
+                </div>
+                <input type="text" class="form-control" @bind="item.Titel" />
+            </div>
+        </li>
+        }
+    </ul>
+
+    <button class="btn btn-primary" @onclick="AddTodo">Add Todo</button>
+    <button class="btn btn-secondary" @onclick="() => SaveTodos(todos)">Save</button>    
+</div>
+
+@code {
+    private string currentMessage = "";
+    private string currentTitle = "";
+
+
+    private IList<TodoItem> todos = new List<TodoItem>();
+    protected override async Task OnInitializedAsync()
+    {
+        todos = await Http.GetFromJsonAsync<IList<TodoItem>>("Todo/GetTodos");
+    }
+
+    private void AddTodo()
+    {
+        if(todos != null)
+        {
+            todos.Add(new TodoItem());
+        }
+    }
+
+    private async Task SaveButtonClicked()
+    {
+        if(await SaveTodos(todos))
+        {
+            currentMessage = "Todos updated";
+        }
+        else
+        {
+            currentMessage = "Todos couln't be updated";
+        }
+    }
+
+    private async Task<bool> SaveTodos(IEnumerable<TodoItem> todoItems)
+    {
+        HttpResponseMessage response = await Http.PostAsJsonAsync("Todo/UpdateTodos", todoItems);
+        return response.IsSuccessStatusCode;
+    }
+
+
+}
