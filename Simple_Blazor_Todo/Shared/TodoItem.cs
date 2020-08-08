@@ -19,7 +19,9 @@ namespace Simple_Blazor_Todo.Shared
 
         public DateTime? DoneAt { get; set;}
 
-        public IEnumerable<TodoItem> ChildItems { get; set; }
+        public DateTime? DeadLine { get; set; }
+
+        public IList<TodoItem> ChildItems { get; set; }
         //public TodoItem ParentItem { get; set; } => cirular references in blazor Text.JSON are available in the newest prerelease version
     }
 }

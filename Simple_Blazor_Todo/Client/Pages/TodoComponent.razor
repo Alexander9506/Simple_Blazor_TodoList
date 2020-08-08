@@ -8,6 +8,7 @@
 <div class="form-group">
     <ul class="list-group">
         @foreach (var item in todos) {
+            //TODO: Add filter => only todos without parent
             <li class="list-group-item my-1">
                 <TodoItemComponent todo="item"></TodoItemComponent>
             </li>

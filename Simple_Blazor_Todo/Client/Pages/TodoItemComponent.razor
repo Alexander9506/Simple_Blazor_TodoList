@@ -12,7 +12,10 @@
             <input type="text" class="form-control" @bind="todo.Titel" 
                    style="@(todo.IsDone ? "text-decoration-line: line-through" : "")" 
                    @attributes="(todo.IsDone ? attributesDisabled : null)"/>
-            <button @onclick="ToggleCollapse">collapse</button>
+            <div>
+                <button class="btn btn-primary" @onclick="ToggleCollapse">collapse</button>
+                <button class="btn btn-secondary" @onclick="(e) => AddChildItem(todo)">+</button>
+            </div>
         </div>
         @if(todo.ChildItems != null && todo.ChildItems.Count() > 0) {
             <div>
@@ -23,10 +26,23 @@
                 }
             </div>
         }
-        <div class="@DetailsCssClasses from-group">
-            <label>Description</label>
-            <textarea class="form-control" rows="4" @bind="todo.Description"></textarea>
+    <div class="@DetailsCssClasses from-group mt-1">
+        <label>Done since</label>
+
+        <div class="input-group">
+            <input class="form-control" type="date" @bind="todo.DoneAt" />
+            <input class="form-control" type="time" @bind="todo.DoneAt" />
         </div>
+
+        <label>Deadline</label>
+        <div class="input-group">
+            <input class="form-control" type="date" @bind="todo.DeadLine" />
+            <input class="form-control" type="time" @bind="todo.DeadLine" />
+        </div>
+
+        <label>Description</label>
+        <textarea class="form-control" rows="4" @bind="todo.Description"></textarea>
+    </div>
     </div>
 }
 
@@ -42,4 +58,13 @@
     public TodoItem todo { get; set; }
 
     private void ToggleCollapse() => collapseDetails = !collapseDetails;
+
+    private void AddChildItem(TodoItem parent)
+    {
+        if(parent.ChildItems == null)
+        {
+            parent.ChildItems = new List<TodoItem>();
+        }
+        parent.ChildItems.Add(new TodoItem() { });
+    }
 }
