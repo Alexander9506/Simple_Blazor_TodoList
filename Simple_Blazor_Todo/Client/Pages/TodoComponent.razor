@@ -7,16 +7,28 @@
 
 <div class="form-group">
     <ul class="list-group">
-        @foreach (var item in todos) {
+        @foreach (var item in activeTodos)
+        {
             //TODO: Add filter => only todos without parent
-            <li class="list-group-item my-1">
-                <TodoItemComponent todo="item"></TodoItemComponent>
-            </li>
-         }
-        </ul>
 
-    <button class="btn btn-primary" @onclick="AddTodo">Add Todo</button>
-    <button class="btn btn-secondary" @onclick="() => SaveTodos(todos)">Save</button>    
+            <li class="list-group-item">
+                <TodoItemComponent todo="item" AddItemBelow="AddItemBlow" SaveItem="SaveTodo" DeleteItem="DeleteItem" MoveItem="MoveItem"></TodoItemComponent>
+            </li>
+        }
+    </ul>
+
+    <div>
+        <ul>
+            @foreach (var item in noneActiveTodos)
+            {
+                <li class="list-group-item">
+                    <TodoItemComponent todo="item" AddItemBelow="AddItemBlow" SaveItem="SaveTodo" DeleteItem="DeleteItem" MoveItem="MoveItem"></TodoItemComponent>
+                </li>
+            }
+        </ul>
+    </div>
+
+    <button class="btn btn-primary float-right" @onclick="AddTodo">Add Todo</button>
 </div>
 
 @code {
@@ -25,17 +37,25 @@
 
 
     private IList<TodoItem> todos = new List<TodoItem>();
+    private IList<TodoItem> activeTodos = new List<TodoItem>();
+    private IList<TodoItem> noneActiveTodos = new List<TodoItem>();
+
+
     protected override async Task OnInitializedAsync() {
 
         todos = await Http.GetFromJsonAsync<IList<TodoItem>>("Todo/GetTodos");
+        SplitTodos(todos);
+    }
+
+    private void SplitTodos(IList<TodoItem> todos)
+    {
+        activeTodos = todos.Where(todo => !todo.IsDone).ToList();
+        noneActiveTodos = todos.Where(todo => todo.IsDone).ToList();
     }
 
     private void AddTodo()
     {
-        if(todos != null)
-        {
-            todos.Add(new TodoItem());
-        }
+        AddItem(new TodoItem());
     }
 
     private async Task SaveButtonClicked()
@@ -56,4 +76,92 @@
         return response.IsSuccessStatusCode;
     }
 
+    private async Task<int> SaveTodo(TodoItem todo)
+    {
+        Console.WriteLine("About to save Todo");
+        HttpResponseMessage response = await Http.PostAsJsonAsync("Todo/UpdateTodo", todo);
+
+        if (response.IsSuccessStatusCode)
+        {
+            string responseText = await response.Content.ReadAsStringAsync();
+            if(int.TryParse(responseText, out int idSavedTodo))
+            {
+                return idSavedTodo;
+            }
+        }
+
+        return 0;
+    }
+
+    private void AddItem(TodoItem todo)
+    {
+        if(todo != null)
+        {
+            todos.Add(todo);
+            if (todo.IsDone)
+            {
+                noneActiveTodos.Add(todo);
+            }
+            else
+            {
+                activeTodos.Add(todo);
+            }
+        }
+    }
+
+    private void MoveItem(TodoItem todo)
+    {
+        if(todo != null)
+        {
+            if (todo.IsDone)
+            {
+                activeTodos.Remove(todo);
+            }
+            else
+            {
+                noneActiveTodos.Remove(todo);
+            }
+        }
+
+        AddItem(todo);
+    }
+
+    private void RemoveItem(TodoItem todo)
+    {
+        if (todo != null)
+        {
+            todos.Remove(todo);
+            if (todo.IsDone)
+            {
+                noneActiveTodos.Remove(todo);
+            }
+            else
+            {
+                activeTodos.Remove(todo);
+            }
+        }
+    }
+
+    private void AddItemBlow(TodoItem upperNeighbor)
+    {
+
+        if (!upperNeighbor.IsDone)
+        {
+            int indexOfNeighbor = todos.IndexOf(upperNeighbor);
+            todos.Insert(indexOfNeighbor + 1, new TodoItem());
+
+            indexOfNeighbor = activeTodos.IndexOf(upperNeighbor);
+            activeTodos.Insert(indexOfNeighbor + 1, new TodoItem());
+        }
+    }
+
+
+    private async Task DeleteItem(TodoItem todo)
+    {
+        HttpResponseMessage response = await Http.PostAsJsonAsync("Todo/DeleteTodo", todo);
+        if (response.IsSuccessStatusCode)
+        {
+            RemoveItem(todo);
+        }
+    }
 }

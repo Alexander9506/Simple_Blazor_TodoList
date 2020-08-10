@@ -41,5 +41,31 @@ namespace Simple_Blazor_Todo.Server.Controllers
             }
             return BadRequest();
         }
+
+        [HttpPost("UpdateTodo")]
+        public async Task<IActionResult> UpdateTodo(TodoItem todo)
+        {
+            if (todo != null)
+            {
+                if (await _todoRepository.SaveTodoItemAsync(todo))
+                {
+                    return Ok(todo.TodoItemID);
+                }
+            }
+            return BadRequest();
+        }
+
+        [HttpPost("DeleteTodo")]
+        public async Task<IActionResult> DeleteTodo(TodoItem todo)
+        {
+            if (todo != null)
+            {
+                if (await _todoRepository.DeleteTodoItemAsync(todo))
+                {
+                    return Ok(todo.TodoItemID);
+                }
+            }
+            return BadRequest();
+        }
     }
 }
