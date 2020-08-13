@@ -1,31 +1,34 @@
 ﻿@using Simple_Blazor_Todo.Shared
+@implements Simple_Blazor_Todo.Client.Helper.IAutosaveChild<TodoItem>
+
 @inject HttpClient Http
-
-<h3>Todo</h3>
-
 <p>@currentMessage</p>
 
 <div class="form-group">
-    <ul class="list-group">
-        @foreach (var item in activeTodos)
-        {
-            //TODO: Add filter => only todos without parent
-
-            <li class="list-group-item">
-                <TodoItemComponent todo="item" AddItemBelow="AddItemBlow" SaveItem="SaveTodo" DeleteItem="DeleteItem" MoveItem="MoveItem"></TodoItemComponent>
-            </li>
-        }
-    </ul>
-
-    <div>
-        <ul>
-            @foreach (var item in noneActiveTodos)
+    <div class="border rounded">
+        <ul class="list-group">
+            @foreach (var item in activeTodos)
             {
+                //TODO: Add filter => only todos without parent
+
                 <li class="list-group-item">
-                    <TodoItemComponent todo="item" AddItemBelow="AddItemBlow" SaveItem="SaveTodo" DeleteItem="DeleteItem" MoveItem="MoveItem"></TodoItemComponent>
+                    <TodoItemComponent todo="item" AddItemBelow="AddItemBlow" DeleteItem="DeleteItem" MoveItem="MoveItem" ChangedItem="AddChangedEntity"></TodoItemComponent>
                 </li>
             }
         </ul>
+    </div>
+    <div>
+        <button class="btn btn-dark" @onclick="ToggleDoneTodosCollapse">Done Todos</button>
+        <div class="border rounded mt-2 @DoneTodosCSS">
+            <ul class="list-group">
+                @foreach (var item in noneActiveTodos)
+                {
+                    <li class="list-group-item">
+                        <TodoItemComponent todo="item" AddItemBelow="AddItemBlow" DeleteItem="DeleteItem" MoveItem="MoveItem" ChangedItem="AddChangedEntity"></TodoItemComponent>
+                    </li>
+                }
+            </ul>
+        </div>
     </div>
 
     <button class="btn btn-primary float-right" @onclick="AddTodo">Add Todo</button>
@@ -34,17 +37,28 @@
 @code {
     private string currentMessage = "";
     private string currentTitle = "";
+    private bool collapseDoneTodos = true;
+    private string DoneTodosCSS => collapseDoneTodos ? "collapse" : "";
 
+    [CascadingParameter]
+    public AutosaveComponent<TodoItem> Parent { get; set; }
 
     private IList<TodoItem> todos = new List<TodoItem>();
     private IList<TodoItem> activeTodos = new List<TodoItem>();
     private IList<TodoItem> noneActiveTodos = new List<TodoItem>();
 
+    public Action<TodoItem> AddChangedEntity { get; set; } = (TodoItem) => Console.WriteLine("Autosave is not enabled");
 
     protected override async Task OnInitializedAsync() {
-
+        AddChangedEntity = Parent.AddChangedEntity;
+        Parent.SaveEntity = SaveTodo;
         todos = await Http.GetFromJsonAsync<IList<TodoItem>>("Todo/GetTodos");
         SplitTodos(todos);
+    }
+
+    private void ToggleDoneTodosCollapse()
+    {
+        collapseDoneTodos = !collapseDoneTodos;
     }
 
     private void SplitTodos(IList<TodoItem> todos)
@@ -57,28 +71,14 @@
     {
         AddItem(new TodoItem());
     }
-
-    private async Task SaveButtonClicked()
+    
+    public async Task SaveEntity(TodoItem item)
     {
-        if(await SaveTodos(todos))
-        {
-            currentMessage = "Todos updated";
-        }
-        else
-        {
-            currentMessage = "Todos couln't be updated";
-        }
-    }
-
-    private async Task<bool> SaveTodos(IEnumerable<TodoItem> todoItems)
-    {
-        HttpResponseMessage response = await Http.PostAsJsonAsync("Todo/UpdateTodos", todoItems);
-        return response.IsSuccessStatusCode;
+        item.TodoItemID = await SaveTodo(item);
     }
 
     private async Task<int> SaveTodo(TodoItem todo)
     {
-        Console.WriteLine("About to save Todo");
         HttpResponseMessage response = await Http.PostAsJsonAsync("Todo/UpdateTodo", todo);
 
         if (response.IsSuccessStatusCode)
@@ -89,7 +89,10 @@
                 return idSavedTodo;
             }
         }
-
+        else
+        {
+            ShowMessage($"{todo?.Titel ?? String.Empty} could'nt be deleted");
+        }
         return 0;
     }
 
@@ -111,19 +114,20 @@
 
     private void MoveItem(TodoItem todo)
     {
-        if(todo != null)
+        if (todo != null)
         {
-            if (todo.IsDone)
+            if (activeTodos.Contains(todo))
             {
                 activeTodos.Remove(todo);
+                noneActiveTodos.Add(todo);
             }
             else
             {
                 noneActiveTodos.Remove(todo);
+                activeTodos.Add(todo);
             }
         }
-
-        AddItem(todo);
+        StateHasChanged();
     }
 
     private void RemoveItem(TodoItem todo)
@@ -155,6 +159,10 @@
         }
     }
 
+    private void ShowMessage(String message)
+    {
+
+    }
 
     private async Task DeleteItem(TodoItem todo)
     {
@@ -163,5 +171,10 @@
         {
             RemoveItem(todo);
         }
+        else
+        {
+            ShowMessage($"{todo?.Titel ?? String.Empty} coul'nt be deleted");
+        }
     }
+
 }

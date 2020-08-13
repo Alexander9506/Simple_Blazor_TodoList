@@ -9,7 +9,13 @@
         <div class="input-group" >
             <div class="input-group-prepend">
                 <div class="input-group-text">
-                    <input class="check" type="checkbox" checked="@todo.IsDone" @onchange="(e) => MoveItem.InvokeAsync(todo)" @oninput="(e) => ChangeAttribute(e, () => todo.IsDone)"/> 
+                    <input class="check" type="checkbox" @bind="todo.IsDone" @bind:event="oninput"
+                           @onchange="(e) => {
+                                         MoveItem.Invoke(todo);
+                                         PropertyHasChanged(String.Empty);
+                                     }"
+                           /> 
+                    @todo.IsDone
                 </div>
             </div>
             <input type="text" class="form-control" 
@@ -32,15 +38,6 @@
                 </button>
             </div>
         </div>
-        @*@if(todo.ChildItems != null && todo.ChildItems.Count() > 0) {
-            <div>
-                @foreach (var item in todo.ChildItems) {
-                    <div class="ml-2 mt-1">
-                        <TodoItemComponent todo="item"></TodoItemComponent>
-                    </div>
-                }
-            </div>
-        }*@
     <div class="@DetailsCssClasses from-group mt-1">
         <label>Done since</label>
 
@@ -64,9 +61,6 @@
 @code {
     private bool collapseDetails = true;
     private string DetailsCssClasses => collapseDetails ? "collapse" : null;
-    private DelayedTrigger entityChangedInformant;
-    private int _counter = 0;
-    private int counter => _counter++;
 
     [Parameter]
     public TodoItem todo { get; set; }
@@ -75,26 +69,17 @@
     public EventCallback<TodoItem> AddItemBelow { get; set; }
 
     [Parameter]
-    public EventCallback<TodoItem> MoveItem { get; set; }
+    public Action<TodoItem> MoveItem { get; set; }
 
     [Parameter]
     public EventCallback<TodoItem> DeleteItem { get; set; }
 
     [Parameter]
-    public Func<TodoItem, Task<int>> SaveItem { get; set; }
+    public Action<TodoItem> ChangedItem{ get; set; }
 
     private Dictionary<string, object> attributesDisabled = new Dictionary<string, object>() {
         {"disabled", ""}
     };
-
-    protected override void OnInitialized()
-    {
-        base.OnInitialized();
-        entityChangedInformant = new DelayedTrigger(2000, async () => {
-            int id = await SaveItem(todo);
-            todo.TodoItemID = id;
-        });
-    }
 
     private void ToggleCollapse() => collapseDetails = !collapseDetails;
 
@@ -107,7 +92,7 @@
         parent.ChildItems.Add(new TodoItem() { });
     }
 
-    private async void ChangeAttribute<T>(ChangeEventArgs e, Expression<Func<T>> property)
+    private void ChangeAttribute<T>(ChangeEventArgs e, Expression<Func<T>> property)
     {
         MemberExpression memberExpression = property.Body as MemberExpression;
         if(memberExpression != null)
@@ -115,8 +100,8 @@
             System.Reflection.PropertyInfo propertyInfo = memberExpression.Member as System.Reflection.PropertyInfo;
             if(propertyInfo != null)
             {
+                PropertyHasChanged(propertyInfo.Name);
                 propertyInfo.SetValue(todo, Convert<T>(e.Value));
-                await PropertyHasChanged(propertyInfo.Name);
             }
         }
     }
@@ -146,9 +131,12 @@
         return default;
     }
 
-    private async Task PropertyHasChanged(string name)
+    private void PropertyHasChanged(string name)
     {
-        await entityChangedInformant.PropertyChanged($"{counter}");
+        if(ChangedItem != null)
+        {
+            ChangedItem.Invoke(todo);
+        }
     }
 
     private string GetDateString(DateTime? date, string pattern)

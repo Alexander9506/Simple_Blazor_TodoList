@@ -1,0 +1,84 @@
+﻿@using Simple_Blazor_Todo.Shared
+@using Simple_Blazor_Todo.Client.Helper
+
+@typeparam EntityType
+
+
+<div>
+    <div class="d-flex justify-content-between">
+        @if (!String.IsNullOrWhiteSpace(Title))
+        {
+            <h3>@Title</h3>
+        }
+        @if (AllChangesSaved)
+        {
+            <i class="fas fa-check"></i>
+        }
+        else
+        {
+            <button class="btn btn-primary" @onclick="async () => await _autoSave.Save()" title="Save">
+                <i class="fas fa-save"></i>
+            </button>
+        }
+    </div>
+
+    <div>
+        <CascadingValue Value="this">
+            @ChildContent
+        </CascadingValue>
+    </div>
+</div>
+
+@code {
+    public Func<EntityType, Task> SaveEntity { get; set; }
+    [Parameter]
+    public string Title { get; set; }
+    private bool lastAutosaveState = true;
+
+    [Parameter]
+    public RenderFragment ChildContent { get; set; }
+
+    [Parameter]
+    public int SaveTimerDelay { get; set; } = 5000;
+
+    private AutoSave<EntityType> _autoSave;
+    private bool AllChangesSaved => _autoSave == null || _autoSave.AllChangesSaved;
+
+    protected override void OnInitialized()
+    {
+        _autoSave = new Helper.AutoSave<EntityType>()
+        {
+            SaveEntities = async (todos) =>
+            {
+                if (SaveEntity != null)
+                {
+                    foreach (var item in todos)
+                    {
+                        await SaveEntity.Invoke(item);
+
+                    }
+                    return true;
+                }
+                else
+                {
+                    throw new ArgumentNullException("SaveEntity is null => no Save Function defined");
+                }
+            },
+            TimerDelay = SaveTimerDelay
+        };
+        _autoSave.SavedAllChanges += OnChangesChanged;
+        _autoSave.UnsavedChanges += OnChangesChanged;
+    }
+
+    public Action<EntityType> AddChangedEntity => _autoSave.AddChangedEntity;
+
+    private void OnChangesChanged(object sender, EventArgs eventArgs)
+    {
+        bool unsavedChanges = _autoSave.AllChangesSaved;
+        if (unsavedChanges != lastAutosaveState)
+        {
+            StateHasChanged();
+            lastAutosaveState = unsavedChanges;
+        }
+    }
+}

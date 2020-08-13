@@ -1,4 +1,8 @@
-﻿@page "/"
+﻿@using Simple_Blazor_Todo.Shared
+@using Simple_Blazor_Todo.Client.Pages.Tabs
 
-<TodoComponent></TodoComponent>
+@page "/"
 
+<AutosaveComponent Title="Todo" EntityType="TodoItem" >
+    <TodoComponent></TodoComponent>
+</AutosaveComponent>
