@@ -35,6 +35,9 @@ namespace Simple_Blazor_Todo.Server.Migrations
                     b.Property<DateTime?>("DoneAt")
                         .HasColumnType("timestamp without time zone");
 
+                    b.Property<int?>("ParentListTodoListId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Titel")
                         .HasColumnType("text");
 
@@ -43,13 +46,38 @@ namespace Simple_Blazor_Todo.Server.Migrations
 
                     b.HasKey("TodoItemID");
 
+                    b.HasIndex("ParentListTodoListId");
+
                     b.HasIndex("TodoItemID1");
 
                     b.ToTable("TodoItems");
                 });
 
+            modelBuilder.Entity("Simple_Blazor_Todo.Shared.TodoList", b =>
+                {
+                    b.Property<int>("TodoListId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Titel")
+                        .HasColumnType("text");
+
+                    b.HasKey("TodoListId");
+
+                    b.ToTable("TodoLists");
+                });
+
             modelBuilder.Entity("Simple_Blazor_Todo.Shared.TodoItem", b =>
                 {
+                    b.HasOne("Simple_Blazor_Todo.Shared.TodoList", "ParentList")
+                        .WithMany("Todos")
+                        .HasForeignKey("ParentListTodoListId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
                     b.HasOne("Simple_Blazor_Todo.Shared.TodoItem", null)
                         .WithMany("ChildItems")
                         .HasForeignKey("TodoItemID1");

@@ -15,14 +15,13 @@
                                          PropertyHasChanged(String.Empty);
                                      }"
                            /> 
-                    @todo.IsDone
                 </div>
             </div>
             <input type="text" class="form-control" 
                    value="@todo.Titel" 
                    style="@(todo.IsDone ? "text-decoration-line: line-through" : "")" 
                    @attributes="(todo.IsDone ? attributesDisabled : null)"
-                   @oninput="(e) => ChangeAttribute(e, () => todo.Titel)"/>
+                   @oninput="(e) => BindingHelper.ChangeAttribute(e, () => todo.Titel, todo, PropertyHasChanged)"/>
             <div class="btn-group ml-1">
                 <button class="btn btn-secondary" @onclick="ToggleCollapse" title="Details">
                     <i class="fas fa-angle-down"></i>
@@ -42,18 +41,18 @@
         <label>Done since</label>
 
         <div class="input-group">
-            <input class="form-control" type="date" @oninput="(e) => ChangeAttribute(e, () => todo.DoneAt)" value="@GetDateString(todo.DoneAt, "yyyy-MM-dd")" />
-            <input class="form-control" type="time" @oninput="(e) => ChangeAttribute(e, () => todo.DoneAt)" value="@GetDateString(todo.DoneAt, "hh:mm")"/>
+            <input class="form-control" type="date" @oninput="(e) => BindingHelper.ChangeAttribute(e, () => todo.DoneAt, todo, PropertyHasChanged)" value="@GetDateString(todo.DoneAt, "yyyy-MM-dd")" />
+            <input class="form-control" type="time" @oninput="(e) => BindingHelper.ChangeAttribute(e, () => todo.DoneAt, todo, PropertyHasChanged)" value="@GetDateString(todo.DoneAt, "hh:mm")"/>
         </div>
 
         <label>Deadline</label>
         <div class="input-group">
-            <input class="form-control" type="date" @oninput="(e) => ChangeAttribute(e, () => todo.DeadLine)" value="@GetDateString(todo.DeadLine, "yyyy-MM-dd")" />
-            <input class="form-control" type="time" @oninput="(e) => ChangeAttribute(e, () => todo.DeadLine)" value="@GetDateString(todo.DeadLine, "hh:mm")"/>
+            <input class="form-control" type="date" @oninput="(e) => BindingHelper.ChangeAttribute(e, () => todo.DeadLine, todo, PropertyHasChanged)" value="@GetDateString(todo.DeadLine, "yyyy-MM-dd")" />
+            <input class="form-control" type="time" @oninput="(e) => BindingHelper.ChangeAttribute(e, () => todo.DeadLine, todo, PropertyHasChanged)" value="@GetDateString(todo.DeadLine, "hh:mm")"/>
         </div>
 
         <label>Description</label>
-        <textarea class="form-control" rows="4"  @oninput="(e) => ChangeAttribute(e, () => todo.Description)">@todo.Description</textarea>
+        <textarea class="form-control" rows="4"  @oninput="(e) => BindingHelper.ChangeAttribute(e, () => todo.Description, todo, PropertyHasChanged)">@todo.Description</textarea>
     </div>
     </div>
 }
@@ -92,46 +91,7 @@
         parent.ChildItems.Add(new TodoItem() { });
     }
 
-    private void ChangeAttribute<T>(ChangeEventArgs e, Expression<Func<T>> property)
-    {
-        MemberExpression memberExpression = property.Body as MemberExpression;
-        if(memberExpression != null)
-        {
-            System.Reflection.PropertyInfo propertyInfo = memberExpression.Member as System.Reflection.PropertyInfo;
-            if(propertyInfo != null)
-            {
-                PropertyHasChanged(propertyInfo.Name);
-                propertyInfo.SetValue(todo, Convert<T>(e.Value));
-            }
-        }
-    }
-
-    private T Convert<T>(Object value)
-    {
-        if(value != null)
-        {
-            if(value.GetType().FullName == typeof(T).FullName)
-            {
-                return (T) value;
-            }
-
-            try
-            {
-                TypeConverter converter = TypeDescriptor.GetConverter(typeof(T));
-                if(converter != null)
-                {
-                    return (T) converter.ConvertFrom(value);
-                }
-            }catch(Exception e)
-            {
-                Console.WriteLine($"Cannot convert from {value.GetType().FullName} to {typeof(T).FullName }");
-                Console.WriteLine(e.Message);
-            }
-        }
-        return default;
-    }
-
-    private void PropertyHasChanged(string name)
+   private void PropertyHasChanged(string name)
     {
         if(ChangedItem != null)
         {

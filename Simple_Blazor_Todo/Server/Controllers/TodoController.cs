@@ -29,6 +29,32 @@ namespace Simple_Blazor_Todo.Server.Controllers
             return todoItems;
         }
 
+        [HttpGet("GetTodoList/{id?}")]
+        public TodoList GetTodos(int id)
+        {
+            TodoList todoList = _todoRepository.TodoLists.FirstOrDefault(todoList => todoList.TodoListId == id);
+            //Blazor javascript cannot handle Cyling references
+            foreach (var todoItem in todoList.Todos)
+            {
+                todoItem.ParentList = null;
+            }
+            
+            return todoList;
+        }
+
+        [HttpPost("UpdateTodoList")]
+        public async Task<IActionResult> UpdateTodo(TodoList todoList)
+        {
+            if (todoList != null)
+            {
+                if (await _todoRepository.SaveTodoListAsync(todoList))
+                {
+                    return Ok(todoList.TodoListId);
+                }
+            }
+            return BadRequest();
+        }
+
         [HttpPost("UpdateTodos")]
         public async Task<IActionResult> UpdateTodos(IEnumerable<TodoItem> todos)
         {

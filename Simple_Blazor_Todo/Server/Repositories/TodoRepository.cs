@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Simple_Blazor_Todo.Shared;
 using System;
 using System.Collections.Generic;
@@ -12,6 +13,7 @@ namespace Simple_Blazor_Todo.Server.Repositories
         private readonly EFContext _context;
         private readonly ILogger _logger;
         public IQueryable<TodoItem> TodoItems => _context.TodoItems;
+        public IQueryable<TodoList> TodoLists => _context.TodoLists.Include(todoList => todoList.Todos);
 
         public TodoRepository(EFContext context, ILogger<TodoRepository> logger)
         {
@@ -68,6 +70,46 @@ namespace Simple_Blazor_Todo.Server.Repositories
                 {
                     _logger.LogError(e, "TodoItems cannot be saved");
                 }
+            }
+            return false;
+        }
+
+        public async Task<bool> SaveTodoListAsync(TodoList list)
+        {
+            if(list != null)
+            {
+                try
+                {
+                    _context.Update(list);
+                    await _context.SaveChangesAsync();
+                    return true;
+                }
+                catch (Exception e)
+                {
+
+                    _logger.LogError(e, "TodoList cannot be saved");
+                }
+
+            }
+            return false;
+        }
+
+        public async Task<bool> DeleteTodoListAsync(TodoList list)
+        {
+            if (list != null)
+            {
+                try
+                {
+                    _context.Remove(list);
+                    await _context.SaveChangesAsync();
+                    return true;
+                }
+                catch (Exception e)
+                {
+
+                    _logger.LogError(e, "TodoList cannot be saved");
+                }
+
             }
             return false;
         }

@@ -5,8 +5,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Migrations\20200807172533_init.cs" />
-    <Compile Remove="Migrations\20200807172533_init.Designer.cs" />
+    <Compile Remove="Migrations\20200814145310_addTodoList.cs" />
+    <Compile Remove="Migrations\20200814145310_addTodoList.Designer.cs" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,0 +1,228 @@
+﻿@using Simple_Blazor_Todo.Shared
+@using Simple_Blazor_Todo.Client.Helper
+@implements Simple_Blazor_Todo.Client.Helper.IAutosaveChild<object>
+
+@inject HttpClient Http
+@if(TodoList != null)
+{
+    <input type="text" value="@TodoList.Titel" class="form-control" @oninput="(e) => BindingHelper.ChangeAttribute(e, () => TodoList.Titel, TodoList, PropertyHasChanged)" />
+}
+
+<div class="form-group">
+    <div class="border rounded">
+        <ul class="list-group">
+            @foreach (var item in activeTodos)
+            {
+                //TODO: Add filter => only todos without parent
+
+                <li class="list-group-item">
+                    <TodoItemComponent todo="item" AddItemBelow="AddItemBlow" DeleteItem="DeleteItem" MoveItem="MoveItem" ChangedItem="AddChangedEntity"></TodoItemComponent>
+                </li>
+            }
+        </ul>
+    </div>
+    <div>
+        <button class="btn btn-dark" @onclick="ToggleDoneTodosCollapse">Done Todos</button>
+        <div class="border rounded mt-2 @DoneTodosCSS">
+            <ul class="list-group">
+                @foreach (var item in noneActiveTodos)
+                {
+                    <li class="list-group-item">
+                        <TodoItemComponent todo="item" AddItemBelow="AddItemBlow" DeleteItem="DeleteItem" MoveItem="MoveItem" ChangedItem="AddChangedEntity"></TodoItemComponent>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+
+    <button class="btn btn-primary float-right" @onclick="AddTodo">Add Todo</button>
+</div>
+
+@code {
+    private string currentTitle = "";
+    private bool collapseDoneTodos = true;
+    private string DoneTodosCSS => collapseDoneTodos ? "collapse" : "";
+
+    [CascadingParameter]
+    public AutosaveComponent<object> Parent { get; set; }
+
+    private TodoList TodoList { get; set; }
+
+    private IList<TodoItem> activeTodos = new List<TodoItem>();
+    private IList<TodoItem> noneActiveTodos = new List<TodoItem>();
+
+    public Action<object> AddChangedEntity { get; set; } = (TodoItem) => Console.WriteLine("Autosave is not enabled");
+
+    protected override async Task OnInitializedAsync() {
+        AddChangedEntity = Parent.AddChangedEntity;
+        Parent.SaveEntity = SaveEntity;
+        this.TodoList = await LoadTodoList(1);
+        if(TodoList != null)
+        {
+            SplitTodos(TodoList.Todos);
+        }
+    }
+
+    private async Task<TodoList> LoadTodoList(int ListId)
+    {
+        return await Http.GetFromJsonAsync<TodoList>($"Todo/GetTodoList/{ListId}");
+    }
+
+    private void ToggleDoneTodosCollapse()
+    {
+        collapseDoneTodos = !collapseDoneTodos;
+    }
+
+    private void SplitTodos(IList<TodoItem> todos)
+    {
+        activeTodos = todos.Where(todo => !todo.IsDone).ToList();
+        noneActiveTodos = todos.Where(todo => todo.IsDone).ToList();
+    }
+
+    private void AddTodo()
+    {
+        AddItem(new TodoItem());
+        AddChangedEntity(TodoList);
+    }
+
+    public async Task SaveEntity(Object o)
+    {
+        switch (o)
+        {
+            case TodoItem item:
+                item.TodoItemID = await SaveTodo(item);
+                break;
+            case TodoList list:
+                TodoList.TodoListId = await SaveTodoList(list);
+                break;
+        }
+    }
+
+    private async Task<int> SaveTodoList(TodoList list)
+    {
+        HttpResponseMessage response = await Http.PostAsJsonAsync("Todo/UpdateTodoList", list);
+
+        if (response.IsSuccessStatusCode)
+        {
+            string responseText = await response.Content.ReadAsStringAsync();
+            if (int.TryParse(responseText, out int idSavedTodoList))
+            {
+                return idSavedTodoList;
+            }
+        }
+        else
+        {
+            ShowMessage($"{list?.Titel ?? String.Empty} could'nt be deleted");
+        }
+        return 0;
+    }
+
+    private async Task<int> SaveTodo(TodoItem todo)
+    {
+        HttpResponseMessage response = await Http.PostAsJsonAsync("Todo/UpdateTodo", todo);
+
+        if (response.IsSuccessStatusCode)
+        {
+            string responseText = await response.Content.ReadAsStringAsync();
+            if(int.TryParse(responseText, out int idSavedTodo))
+            {
+                return idSavedTodo;
+            }
+        }
+        else
+        {
+            ShowMessage($"{todo?.Titel ?? String.Empty} could'nt be deleted");
+        }
+        return 0;
+    }
+
+    private void AddItem(TodoItem todo)
+    {
+        if(TodoList?.Todos != null)
+        {
+            TodoList.Todos.Add(todo);
+            if (todo.IsDone)
+            {
+                noneActiveTodos.Add(todo);
+            }
+            else
+            {
+                activeTodos.Add(todo);
+            }
+        }
+    }
+
+    private void MoveItem(TodoItem todo)
+    {
+        if (todo != null)
+        {
+            if (activeTodos.Contains(todo))
+            {
+                activeTodos.Remove(todo);
+                noneActiveTodos.Add(todo);
+            }
+            else
+            {
+                noneActiveTodos.Remove(todo);
+                activeTodos.Add(todo);
+            }
+        }
+        StateHasChanged();
+    }
+
+    private void RemoveItem(TodoItem todo)
+    {
+        if (TodoList?.Todos != null)
+        {
+            TodoList.Todos.Remove(todo);
+            if (todo.IsDone)
+            {
+                noneActiveTodos.Remove(todo);
+            }
+            else
+            {
+                activeTodos.Remove(todo);
+            }
+        }
+    }
+
+    private void AddItemBlow(TodoItem upperNeighbor)
+    {
+
+        if (!upperNeighbor.IsDone)
+        {
+            TodoItem newTodo = new TodoItem();
+            int indexOfNeighbor = TodoList.Todos.IndexOf(upperNeighbor);
+            TodoList.Todos.Insert(indexOfNeighbor + 1, newTodo);
+
+            indexOfNeighbor = activeTodos.IndexOf(upperNeighbor);
+            activeTodos.Insert(indexOfNeighbor + 1, newTodo);
+        }
+    }
+
+    private void ShowMessage(String message)
+    {
+        //TODO:!
+    }
+
+    private async Task DeleteItem(TodoItem todo)
+    {
+        HttpResponseMessage response = await Http.PostAsJsonAsync("Todo/DeleteTodo", todo);
+        if (response.IsSuccessStatusCode)
+        {
+            RemoveItem(todo);
+        }
+        else
+        {
+            ShowMessage($"{todo?.Titel ?? String.Empty} coul'nt be deleted");
+        }
+    }
+
+    private void PropertyHasChanged(string name)
+    {
+        if (AddChangedEntity != null)
+        {
+            AddChangedEntity.Invoke(TodoList);
+        }
+    }
+}

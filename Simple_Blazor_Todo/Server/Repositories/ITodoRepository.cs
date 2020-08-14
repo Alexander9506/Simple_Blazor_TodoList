@@ -9,9 +9,13 @@ namespace Simple_Blazor_Todo.Server.Repositories
     public interface ITodoRepository
     {
         IQueryable<TodoItem> TodoItems { get; }
+        IQueryable<TodoList> TodoLists { get; }
 
         Task<bool> SaveTodoItemAsync(TodoItem item);
         Task<bool> DeleteTodoItemAsync(TodoItem item);
         Task<bool> SaveTodoItemsAsync(IEnumerable<TodoItem> todos);
+
+        Task<bool> SaveTodoListAsync(TodoList list);
+        Task<bool> DeleteTodoListAsync(TodoList list);
     }
 }

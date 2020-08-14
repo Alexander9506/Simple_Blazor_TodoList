@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text;
 
@@ -8,6 +9,8 @@ namespace Simple_Blazor_Todo.Shared
     public class TodoItem
     {
         public int TodoItemID { get; set; }
+
+        public TodoList ParentList { get; set; }
         public string Titel { get; set; }
         public string Description { get; set; }
 
