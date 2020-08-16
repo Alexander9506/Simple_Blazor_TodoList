@@ -33,13 +33,19 @@ namespace Simple_Blazor_Todo.Server.Controllers
         public TodoList GetTodos(int id)
         {
             TodoList todoList = _todoRepository.TodoLists.FirstOrDefault(todoList => todoList.TodoListId == id);
+
             //Blazor javascript cannot handle Cyling references
-            foreach (var todoItem in todoList.Todos)
+            todoList.Todos = RemoveItemParents(todoList.Todos);
+            return todoList;
+        }
+
+        private IList<TodoItem> RemoveItemParents(IList<TodoItem> todos)
+        {
+            foreach (var todoItem in todos)
             {
                 todoItem.ParentList = null;
             }
-            
-            return todoList;
+            return todos;
         }
 
         [HttpPost("UpdateTodoList")]
@@ -47,22 +53,26 @@ namespace Simple_Blazor_Todo.Server.Controllers
         {
             if (todoList != null)
             {
+                Console.WriteLine($"Save TodoList with ID: {todoList.TodoListId}");
                 if (await _todoRepository.SaveTodoListAsync(todoList))
                 {
-                    return Ok(todoList.TodoListId);
+                    //Blazor javascript cannot handle Cyling references
+                    todoList.Todos = RemoveItemParents(todoList.Todos);
+                    return Ok(todoList);
                 }
             }
             return BadRequest();
         }
 
         [HttpPost("UpdateTodos")]
-        public async Task<IActionResult> UpdateTodos(IEnumerable<TodoItem> todos)
+        public async Task<IActionResult> UpdateTodos(IList<TodoItem> todos)
         {
             if(todos != null && todos.Count() > 0)
             {
                 if (await _todoRepository.SaveTodoItemsAsync(todos))
                 {
-                    return Ok();
+                    //Blazor javascript cannot handle Cyling references
+                    return Ok(RemoveItemParents(todos));
                 }
             }
             return BadRequest();
@@ -73,6 +83,8 @@ namespace Simple_Blazor_Todo.Server.Controllers
         {
             if (todo != null)
             {
+                Console.WriteLine("Save Todo On Server");
+                Console.WriteLine($" ID: {todo.TodoItemID}, Titel: {todo.Titel}, Description: {todo.Description}, IsDone: {todo.IsDone}");
                 if (await _todoRepository.SaveTodoItemAsync(todo))
                 {
                     return Ok(todo.TodoItemID);

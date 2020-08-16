@@ -100,25 +100,52 @@
 
     private async Task<int> SaveTodoList(TodoList list)
     {
+        Console.WriteLine("old TodoListID : " + list.TodoListId);
         HttpResponseMessage response = await Http.PostAsJsonAsync("Todo/UpdateTodoList", list);
 
         if (response.IsSuccessStatusCode)
         {
-            string responseText = await response.Content.ReadAsStringAsync();
-            if (int.TryParse(responseText, out int idSavedTodoList))
+            TodoList responseList = await response.Content.ReadFromJsonAsync<TodoList>();
+
+            Console.WriteLine("New TodoListID : " + list.TodoListId);
+            for (int i = 0; i < list.Todos.Count; i++)
             {
-                return idSavedTodoList;
+                var item = list.Todos[i];
+                item.TodoItemID = responseList.Todos[i].TodoItemID;
+            }
+            return responseList.TodoListId;
+        }
+        else
+        {
+            ShowMessage($"{list?.Titel ?? String.Empty} could'nt be saved");
+        }
+        return -1;
+    }
+
+
+    private async Task SaveTodos(IList<TodoItem> todos)
+    {
+        HttpResponseMessage response = await Http.PostAsJsonAsync("Todo/UpdateTodos", todos);
+        Console.WriteLine("Save Todos");
+        if (response.IsSuccessStatusCode)
+        {
+            IList<TodoItem> responseList = await response.Content.ReadFromJsonAsync<IList<TodoItem>>();
+
+            for (int i = 0; i < todos.Count; i++)
+            {
+                var item = todos[i];
+                item.TodoItemID = responseList[i].TodoItemID;
             }
         }
         else
         {
-            ShowMessage($"{list?.Titel ?? String.Empty} could'nt be deleted");
+            ShowMessage("todos could'nt be saved");
         }
-        return 0;
     }
 
     private async Task<int> SaveTodo(TodoItem todo)
     {
+        OutputTodo(todo);
         HttpResponseMessage response = await Http.PostAsJsonAsync("Todo/UpdateTodo", todo);
 
         if (response.IsSuccessStatusCode)
@@ -126,6 +153,7 @@
             string responseText = await response.Content.ReadAsStringAsync();
             if(int.TryParse(responseText, out int idSavedTodo))
             {
+                Console.WriteLine("Saved");
                 return idSavedTodo;
             }
         }
@@ -134,6 +162,11 @@
             ShowMessage($"{todo?.Titel ?? String.Empty} could'nt be deleted");
         }
         return 0;
+    }
+
+    private void OutputTodo(TodoItem todo)
+    {
+        Console.WriteLine($"ID: {todo.TodoItemID}, Titel: {todo.Titel}, Description: {todo.Description}, IsDone: {todo.IsDone}");
     }
 
     private void AddItem(TodoItem todo)
@@ -198,6 +231,7 @@
             indexOfNeighbor = activeTodos.IndexOf(upperNeighbor);
             activeTodos.Insert(indexOfNeighbor + 1, newTodo);
         }
+        AddChangedEntity(TodoList);
     }
 
     private void ShowMessage(String message)
@@ -210,11 +244,13 @@
         HttpResponseMessage response = await Http.PostAsJsonAsync("Todo/DeleteTodo", todo);
         if (response.IsSuccessStatusCode)
         {
+            Console.WriteLine("About to delete:");
+            OutputTodo(todo);
             RemoveItem(todo);
         }
         else
         {
-            ShowMessage($"{todo?.Titel ?? String.Empty} coul'nt be deleted");
+            ShowMessage($"{todo?.Titel ?? String.Empty} could'nt be deleted");
         }
     }
 

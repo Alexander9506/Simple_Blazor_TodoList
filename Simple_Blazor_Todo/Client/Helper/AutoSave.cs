@@ -40,7 +40,6 @@ namespace Simple_Blazor_Todo.Client.Helper
             {
                 Console.WriteLine($"About to save {ChangedEntities.Count}");
                 await Save();
-                
             }
             else
             {
@@ -76,7 +75,7 @@ namespace Simple_Blazor_Todo.Client.Helper
         private void StartTimer()
         {
             Console.WriteLine("New Timer");
-            _Timer = new Timer(new TimerCallback(TimerTick), null, 2000, 2000);
+            _Timer = new Timer(new TimerCallback(TimerTick), null, _timerDelay, _timerDelay);
         }
 
         public void AddChangedEntity(T entity)
